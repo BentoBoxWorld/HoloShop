@@ -1,0 +1,10 @@
+name: HoloShop
+main: world.bentobox.holoshop.HoloShop
+version: ${version}${build.number}
+api-version: 1.21.0
+metrics: true
+icon: "CHEST"
+repository: "BentoBoxWorld/HoloShop"
+
+authors: tastybento
+
