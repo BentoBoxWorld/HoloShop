@@ -4,8 +4,12 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.entity.TextDisplay;
+import org.bukkit.entity.Display.Billboard;
 
 import world.bentobox.bentobox.database.Database;
+import world.bentobox.bentobox.database.objects.Island;
 import world.bentobox.bentobox.util.Util;
 import world.bentobox.holoshop.objects.ChestData;
 import world.bentobox.holoshop.objects.HoloChestShop;
@@ -30,8 +34,27 @@ public class ShopManager {
     public void setShop(ChestData chestData) {
         HoloChestShop hcs = new HoloChestShop(chestData);
         handler.saveObject(hcs);
+        // Display hologram
+        displayHologram(chestData);
     }
     
+    private void displayHologram(ChestData chestData) {
+        // TODO Auto-generated method stub
+        
+    }
+    
+    private void createHologram(ChestData chestData) {
+        Location pos = chestData.location().clone().add(0.5, 1.1, 0.5);
+        World world = pos.getWorld();
+        assert world != null;
+
+        TextDisplay newDisplay = world.spawn(pos, TextDisplay.class);
+        newDisplay.setAlignment(TextDisplay.TextAlignment.CENTER);
+        newDisplay.setBillboard(Billboard.CENTER);
+        
+    }
+
+
     /**
      * Try to get a holoshop for location
      * @param location location of the chest
@@ -44,6 +67,17 @@ public class ShopManager {
             return Optional.of(hcs);
         }
         return Optional.empty();
+    }
+
+
+    /**
+     * Remove a shop with ID
+     * @param id unique ID of shop
+     */
+    public void remove(String id) {
+        if (handler.objectExists(id)) {
+            handler.deleteID(id);
+        }
     }
     
     

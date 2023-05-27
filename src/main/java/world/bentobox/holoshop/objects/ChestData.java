@@ -5,6 +5,8 @@ import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.Material;
 
+import com.google.gson.annotations.Expose;
+
 /**
  * @param location location of the chest
  * @param type the material type being sold or bought
@@ -14,5 +16,5 @@ import org.bukkit.Material;
  * @param islandID island id where the chest is (optional)
  *
  */
-public record ChestData(Location location, Material type, double sell, double buy, UUID owner, String islandID) {};
+public record ChestData(@Expose Location location, @Expose Material type, @Expose double sell, @Expose double buy, @Expose UUID owner, @Expose String islandID) {};
 

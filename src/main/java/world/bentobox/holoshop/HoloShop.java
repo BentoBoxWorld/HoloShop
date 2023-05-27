@@ -2,6 +2,7 @@ package world.bentobox.holoshop;
 
 import world.bentobox.bentobox.api.addons.Addon;
 import world.bentobox.holoshop.commands.MakeShopCommand;
+import world.bentobox.holoshop.listeners.ChestShopListener;
 
 /**
  * Main HoloShop class - provides chest shops with holograms
@@ -22,6 +23,8 @@ public class HoloShop extends Addon {
                 new MakeShopCommand(this, gameModeAddon.getPlayerCommand().get());
             }
         });
+        // Register listeners
+        this.registerListener(new ChestShopListener(this));
     }
 
     @Override

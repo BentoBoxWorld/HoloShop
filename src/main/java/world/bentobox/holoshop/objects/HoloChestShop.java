@@ -1,5 +1,8 @@
 package world.bentobox.holoshop.objects;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.gson.annotations.Expose;
 
 import world.bentobox.bentobox.database.objects.DataObject;
@@ -24,7 +27,10 @@ public class HoloChestShop implements DataObject {
     @Expose
     private ChestData chest;
     
+    @Expose
+    private List<ChestTransaction> transactions = new ArrayList<>();
 
+    
     public HoloChestShop(ChestData chest) {
         super();
         this.uniqueId = Util.getStringLocation(chest.location());
@@ -54,6 +60,23 @@ public class HoloChestShop implements DataObject {
      */
     public void setChest(ChestData chest) {
         this.chest = chest;
+    }
+
+    /**
+     * @return the transactions
+     */
+    public List<ChestTransaction> getTransactions() {
+        if (transactions == null) {
+            transactions = new ArrayList<>();
+        }
+        return transactions;
+    }
+
+    /**
+     * @param transactions the transactions to set
+     */
+    public void setTransactions(List<ChestTransaction> transactions) {
+        this.transactions = transactions;
     }
 
 
