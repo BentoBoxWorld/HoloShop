@@ -38,6 +38,10 @@ public class ShopManager {
         displayHologram(chestData);
     }
     
+    public void saveShop(HoloChestShop hcs) {
+        handler.saveObject(hcs);
+    }
+    
     private void displayHologram(ChestData chestData) {
         // TODO Auto-generated method stub
         

@@ -1,12 +1,17 @@
 package world.bentobox.holoshop.listeners;
 
+import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -21,7 +26,9 @@ import org.bukkit.inventory.ItemStack;
 import world.bentobox.bentobox.BentoBox;
 import world.bentobox.bentobox.api.localization.TextVariables;
 import world.bentobox.bentobox.api.user.User;
+import world.bentobox.bentobox.util.Util;
 import world.bentobox.holoshop.HoloShop;
+import world.bentobox.holoshop.Utilities;
 import world.bentobox.holoshop.objects.ChestTransaction;
 import world.bentobox.holoshop.objects.HoloChestShop;
 
@@ -30,6 +37,8 @@ import world.bentobox.holoshop.objects.HoloChestShop;
  *
  */
 public class ChestShopListener implements Listener {
+
+    private static final DecimalFormat df = new DecimalFormat("0.00");
 
     private HoloShop addon;
     private Map<String, Integer> chestInventory = new HashMap<>();
@@ -59,18 +68,14 @@ public class ChestShopListener implements Listener {
                 u.sendMessage("holoshop.shop-removed");
             } else {
                 e.setCancelled(true);
-                u.sendMessage("holoshop.protected");
+                u.sendMessage("holoshop.error.protected");
             }
         });
     }
 
-
-    
-
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled=false)
     public void onInventoryOpen(InventoryOpenEvent e)
     {
-        BentoBox.getInstance().logDebug(e.getEventName());
         if (!e.getInventory().getType().equals(InventoryType.CHEST)) {
             return;
         }
@@ -101,7 +106,6 @@ public class ChestShopListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled=true)
     public void onInventoryClose(InventoryCloseEvent e)
     {
-        BentoBox.getInstance().logDebug(e.getEventName());
         if (!e.getInventory().getType().equals(InventoryType.CHEST)) {
             return;
         }
@@ -114,7 +118,10 @@ public class ChestShopListener implements Listener {
         User u = User.getInstance(e.getPlayer());
         Location l = inventoryHolder.getInventory().getLocation();
         addon.getManager().getShop(l).ifPresent(hcs -> {
+            // Clear
+            clearChest(u, hcs,inventoryHolder);
             if (!hcs.getChest().owner().equals(u.getUniqueId())) {
+
                 // This is a vistor, check the before and after
                 if (chestInventory.containsKey(hcs.getUniqueId())) {
                     Material t = hcs.getChest().type();
@@ -130,6 +137,46 @@ public class ChestShopListener implements Listener {
             }
             chestInventory.remove(hcs.getUniqueId());
         });
+
+    }
+
+    private void clearChest(User u, HoloChestShop hcs, InventoryHolder inventoryHolder) {
+        List<ItemStack> toBeRemoved = new ArrayList<>();
+        // Remove wrong typed items
+        inventoryHolder.getInventory().forEach(item -> {
+            if (item != null && !item.getType().isAir() && !item.getType().equals(hcs.getChest().type())) {
+                u.sendMessage("holoshop.error.wrong-item-type", "[type]", Util.prettifyText(item.getType().name()));
+                toBeRemoved.add(item);
+            }
+        });
+        // Remove items that are not 100%
+        inventoryHolder.getInventory().forEach(item -> {
+            if (item != null && Utilities.isDamaged(item)) {
+                u.sendMessage("holoshop.error.worn-item", "[type]", Util.prettifyText(item.getType().name()));
+                toBeRemoved.add(item);
+            }
+        });
+        // Remove items that are not the same
+        ItemStack firstItem = null;
+        for (ItemStack item : inventoryHolder.getInventory()) {
+            if (item == null || !item.getType().isAir()) continue;
+            if (firstItem != null) {
+                if (!Utilities.isSimilarNoDurability(firstItem, item)) {
+                    u.sendMessage("holoshop.error.not-identical", "[type]", Util.prettifyText(item.getType().name()));
+                    toBeRemoved.add(item);
+                }
+            } else {
+                firstItem = item;
+            }
+        }
+        // Remove items
+        toBeRemoved.forEach(inventoryHolder.getInventory()::remove);
+        toBeRemoved.forEach(i -> {
+            World w = hcs.getChest().location().getWorld();
+            w.dropItem(hcs.getChest().location(), i);
+            w.playSound(hcs.getChest().location(), Sound.ITEM_BUNDLE_DROP_CONTENTS, 1F, 1F);
+        });
+
     }
 
     private void buySell(User u, HoloChestShop hcs, int beforeCount, int afterCount) {
@@ -139,42 +186,29 @@ public class ChestShopListener implements Listener {
         }
         if (beforeCount > afterCount) {
             // Sale
-            double cost = diff * hcs.getChest().sell();
-            String costString = addon.getPlugin().getVault().map(vh -> vh.format(cost)).orElse(String.valueOf(cost));
-            u.sendMessage("holochest-you-bought", TextVariables.NUMBER, "[quantity]", "[cost]", costString);
-            addon.getPlugin().logDebug("Sold " + hcs.getChest().type() + " x " + diff + " for " + costString);
+            double cost = cost(diff, hcs.getChest().sell());
+            String costString = addon.getPlugin().getVault().map(vh -> vh.format(cost)).orElse(df.format(cost));
+            u.sendMessage("holoshop.you-bought", TextVariables.NUMBER, String.valueOf(diff), "[type]", Util.prettifyText(hcs.getChest().type().name()), "[cost]", costString);
             ChestTransaction tx = new ChestTransaction(System.currentTimeMillis(), u.getUniqueId(), hcs.getChest().type(), cost, diff);
             hcs.getTransactions().add(tx);
-
+            addon.getManager().saveShop(hcs);
         } else {
             // Buy back
-            double cost = diff * hcs.getChest().buy();
-            String costString = addon.getPlugin().getVault().map(vh -> vh.format(cost)).orElse(String.valueOf(cost));
-            u.sendMessage("holochest-you-sold", TextVariables.NUMBER, "[quantity]", "[cost]", costString);
+            double cost = cost(diff, hcs.getChest().buy());
+            String costString = addon.getPlugin().getVault().map(vh -> vh.format(cost)).orElse(df.format(cost));
+            u.sendMessage("holoshop.you-sold", TextVariables.NUMBER, String.valueOf(diff), "[type]", Util.prettifyText(hcs.getChest().type().name()), "[cost]", costString);
             addon.getPlugin().logDebug("Sold " + hcs.getChest().type() + " x " + diff + " for " + costString);
             ChestTransaction tx = new ChestTransaction(System.currentTimeMillis(), u.getUniqueId(), hcs.getChest().type(), cost, diff);
             hcs.getTransactions().add(tx);
+            addon.getManager().saveShop(hcs);
         }
 
     }
 
-    private boolean checkTypes(User u, HoloChestShop hcs, ItemStack[] before, ItemStack[] after) {
-        Material t = hcs.getChest().type();
-        if (Arrays.stream(before).filter(Objects::nonNull).map(ItemStack::getType).allMatch(m -> !m.equals(t))) {
-            addon.logWarning("Chest shop before items don't match type " + hcs);
-            return false;
-        }
-        if (Arrays.stream(after).filter(Objects::nonNull).map(ItemStack::getType).allMatch(m -> !m.equals(t))) {
-            addon.logWarning("Chest shop after items don't match type " + hcs);
-            return false;
-        }
-        // TODO, check for durability of items
-        Arrays.stream(before).filter(Objects::nonNull).map(ItemStack::getType).filter(m -> !m.isAir()).distinct().forEach(m -> BentoBox.getInstance().logDebug("Before type " + m));
-        Arrays.stream(after).filter(Objects::nonNull).map(ItemStack::getType).filter(m -> !m.isAir()).distinct().forEach(m -> BentoBox.getInstance().logDebug("After type " + m));
-
-        return Arrays.stream(before).filter(Objects::nonNull).map(ItemStack::getType).filter(m -> !m.isAir()).distinct().count() 
-                == Arrays.stream(after).filter(Objects::nonNull).map(ItemStack::getType).filter(m -> !m.isAir()).distinct().count();
+    private double cost(int diff, double price) {
+        double cost = diff * price;
+        if (Math.abs(cost) < 0.001d) cost = 0d;
+        return cost;
     }
-
 
 }

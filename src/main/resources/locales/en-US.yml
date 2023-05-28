@@ -1,0 +1,19 @@
+holoshop:
+  shop-removed: "&b Shop removed!"
+  you-bought: "&b You bought [number] [type]'s for [cost]"
+  you-sold: "&b You sold [number] [type]'s for [cost]"
+  error:
+    in-use: "&c Shop is in use. Wait your turn."
+    protected: "&c Shop protected"
+    not-identical: "&c Non-identical items in chest: [type]"
+    worn-item: "&c Worn items found in chest: [type]"
+    wrong-item-type: "&c Wrong item type found in chest: [type]"
+  commands:
+    makechest:
+      description: "Make the chest you are looking at into a HoloShop"
+      parameters: "<sell price> <buy price>"
+      success: "&c Made shop that sells [type] for [sell-price] and buys for [buy-price]"
+      look-at-chest: "&c Look at the chest when you run that command."
+      only-single-chest: "&c Only single chests can be shops"
+      empty-chest: "&c There must be at least one item in the chest to start"
+      cannot-be-negative: "&c Price cannot be negative"
